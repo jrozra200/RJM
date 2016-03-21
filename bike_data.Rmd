@@ -61,7 +61,7 @@ With those steps completed, I am now able to combine the two data frames into on
 combined_data <- rbind(early_data, later_data[, c(2:10, 17, 16, 11)])
 ```
 
-# EXPLORING THE DATA
+# Exploring the Data
 
 ## Stolen Bike Values
 
