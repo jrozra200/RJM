@@ -1,23 +1,6 @@
-setwd("~/Google Drive/Grad School/Programming Practice/RJMetrics Interview/")
-
 library(ggmap)
 library(ggplot2)
 library(plyr)
-
-# QUESTIONS OF THE DATA #
-# How many Bikes were stolen in the data set?
-# What is the range of dates in the data?
-# Is there missing data?
-# What was the biggest/smallest value of bike stolen
-# What was the average value of bike stolen?
-# What day had the most/least count of bikes stolen? What is the average amount per day?
-# How much $ in value of bikes stolen each day?
-# What hour of the day are the most bikes stolen?
-# What day of the week are the most bikes stolen?
-# What month of the year are teh most bikes stolen?
-# What can I see from the UCR codes?
-# What can I see from the distrcit codes?
-# Where were the most fines? Can I see them on a heat map?
 
 ## LOAD THE DATA
 early_data <- read.csv("Bicycle_Thefts.csv")
@@ -55,11 +38,13 @@ names(later_latlong) <- c("lon", "lat")
 later_latlong$lon <- as.numeric(as.character(later_latlong$lon))
 later_latlong$lat <- as.numeric(as.character(later_latlong$lat))
 
+## COMBINE WITH THE later_data DATASET
 later_data <- cbind(later_data, later_latlong)
 
 ## GET A COMBINED DATA SET FOR EASE OF USE
 combined_data <- rbind(early_data, later_data[, c(2:10, 17, 16, 11)])
 
+## PLOT THE HISTOGRAM AND BOXPLOT OF STOLEN VALUES
 par(mfrow = c(1,2))
 hist(combined_data$Stolen_Value, xlab = "Value of Stolen Bike ($)", 
      main = "Histogram of Stolen Bike Value")
@@ -67,18 +52,18 @@ boxplot(combined_data$Stolen_Value, ylab = "Value of Stolen Bike ($)",
         main = "Boxplot of Stolen Bike Value")
 quantile(combined_data$Stolen_Value, c(0.1, 0.25, 0.5, 0.75, 0.9))
 
-# What was the biggest/smallest value of bike stolen
-maxvalue <- max(combined_data$Stolen_Value)
-minvalue_not_zero <- min(combined_data$Stolen_Value[combined_data$Stolen_Value != 0])
-
+## PLOT THE VALUE VS UCR CODE
 par(mfrow = c(1,1))
 boxplot(combined_data$Stolen_Value ~ combined_data$UCR)
 
+## WHAT ARE THE MOST POPULAR UCR CODES
 count_by_UCR <- ddply(combined_data, .(UCR), summarize, count = length(UCR))
 
+## CREATE THE VARIABLES MONTH AND WEEKDAY
 combined_data$month <- months(combined_data$Theft_Date)
 combined_data$dow <- weekdays(combined_data$Theft_Date)
 
+## SUMMARIZE BY MONTH AND PLOT THE RESULTS
 count_by_month <- ddply(combined_data, .(month), summarize, 
                         count615 = length(month[UCR == 615]), 
                         count625 = length(month[UCR == 625]),
@@ -94,6 +79,7 @@ barplot(count_by_month, col = c("blue", "red", "yellow"))
 legend(1, 1000, rownames(count_by_month), fill = c("blue", "red", "yellow"), 
        bty = "n")
 
+## SUMMARIZE BY WEEKDAY AND PLOT THE RESULTS
 count_by_weekday <- ddply(combined_data, .(dow), summarize, 
                           count615 = length(dow[UCR == 615]),
                           count625 = length(dow[UCR == 625]),
@@ -109,6 +95,7 @@ barplot(count_by_weekday, col = c("blue", "red", "yellow"))
 legend(0, 1250, rownames(count_by_weekday), fill = c("blue", "red", "yellow"), 
        bty = "n")
 
+## SUMMARIZE BY HOUR OF THE DAY AND PLOT THE RESULTS
 count_by_hour <- ddply(combined_data, .(Theft_Hour), summarize, 
                        count615 = length(Theft_Hour[UCR == 615]),
                        count625 = length(Theft_Hour[UCR == 625]),
@@ -121,6 +108,7 @@ barplot(count_by_hour, col = c("blue", "red", "yellow"))
 legend(0, 600, rownames(count_by_weekday), fill = c("blue", "red", "yellow"), 
        bty = "n")
 
+## BUILD THE HEATMAPS - FIRST THE HIGHER LEVEL, THEN ZOOMED A BIT MORE
 phil2 <- get_map(location = "Philadelphia", maptype = "roadmap", zoom = 12)
 map2 <- ggmap(phil2, extent = "device") + 
         geom_density2d(data = early_data, aes(x = lon, y = lat)) + 
@@ -128,6 +116,7 @@ map2 <- ggmap(phil2, extent = "device") +
                        size = 0.01, geom = "polygon") + 
         scale_fill_gradient(low = "green", high = "red", guide = FALSE) + 
         scale_alpha(range = c(0, 0.3), guide = FALSE)
+map2
 
 phil1 <- get_map(location = "Philadelphia", maptype = "roadmap", zoom = 13)
 map1 <- ggmap(phil1, extent = "device") + 
@@ -136,10 +125,4 @@ map1 <- ggmap(phil1, extent = "device") +
                        size = 0.01, geom = "polygon") + 
         scale_fill_gradient(low = "green", high = "red", guide = FALSE) + 
         scale_alpha(range = c(0, 0.3), guide = FALSE)
-
-count_by_district <- ddply(combined_data, .(District), summarize, 
-                           count = length(District))
-
-
-
-
+map1
