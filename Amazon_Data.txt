@@ -1,7 +1,5 @@
-For this exercise, I've had a difficult time figuring out how to answer. 
-There are a number of things I edited in the data frame to clean it up; 
-I mostly consider them business as usual and hope that I am not over 
-simplifying the task.
+There are a number of of data cleaning tasks that I would make to analyze 
+this data. 
 
 For 1 - the date isn't in a human readable format. This is easily solvable 
 in R by reformatting the column.
