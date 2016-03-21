@@ -55,7 +55,7 @@ later_latlong$lat <- as.numeric(as.character(later_latlong$lat))
 later_data <- cbind(later_data, later_latlong)
 ```
 
-With those steps completed, I am now able to combine the two dataframes into one. 
+With those steps completed, I am now able to combine the two data frames into one. 
 
 ```{r combine_data}
 combined_data <- rbind(early_data, later_data[, c(2:10, 17, 16, 11)])
@@ -80,7 +80,7 @@ Looking above, you can see that there are definitely some expensive bikes stolen
 
 ## Uniform Crime Report Codes
 
-Now, there are three Uniform Crime Report (UCR) codes present in the data. After a substantial amount of Googling, a message to an aquaintance of mine at Socrata (the company is responsible for posting the data for OpenDataPhilly), and a few tweets to the CDO of the city, Tim Wisniewski, I was unable to say definitively what the difference is between these codes... I was only able to find information suggesting the 6xx codes are larceny (pretty obvious). So, I tried to get the data to tell me. 
+Now, there are three Uniform Crime Report (UCR) codes present in the data. After a substantial amount of Googling, a message to an acquaintance of mine at Socrata (the company is responsible for posting the data for OpenDataPhilly), and a few tweets to the CDO of the city, Tim Wisniewski, I was unable to say definitively what the difference is between these codes... I was only able to find information suggesting the 6xx codes are larceny (pretty obvious). So, I tried to get the data to tell me. 
 
 ```{r ucr_codes}
 par(mfrow = c(1,1))
@@ -90,7 +90,7 @@ count_by_UCR <- ddply(combined_data, .(UCR), summarize, count = length(UCR))
 print(count_by_UCR)
 ```
 
-About two-thirds of the data is labeled as a UCR of 615. Those bikes stolen under that pretense span the range of Stolen Value. 625 encompases a majority of that final one-third, but the bikes are much more modestly valued. 635 is only a small percentage of the overall count and accounts for even more modestly valued bikes yet. 
+About two-thirds of the data is labeled as a UCR of 615. Those bikes stolen under that pretense span the range of Stolen Value. 625 encompasses a majority of that final one-third, but the bikes are much more modestly valued. 635 is only a small percentage of the overall count and accounts for even more modestly valued bikes yet. 
 
 ## Timing of the Theft
 
@@ -156,7 +156,7 @@ legend(1, 1000, rownames(count_by_month), fill = c("blue", "red", "yellow"),
 
 ## Location of the Theft
 
-The last part of this data I want to investigate is where the thefts are occuring. You can see below that there is a very hot spot at center city with two other warm spots at Temple and University City. 
+The last part of this data I want to investigate is where the thefts are occurring. You can see below that there is a very hot spot at center city with two other warm spots at Temple and University City. 
 
 ```{r building_heatmaps}
 phil2 <- get_map(location = "Philadelphia", maptype = "roadmap", zoom = 12)
