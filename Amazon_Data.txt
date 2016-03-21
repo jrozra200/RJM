@@ -1,8 +1,8 @@
-There are a number of of data cleaning tasks that I would make to analyze 
-this data. 
+There are a number of of data cleaning tasks that I would take in order
+to analyze this data. 
 
-For 1 - the date isn't in a human readable format. This is easily solvable 
-in R by reformatting the column.
+For 1 - the date isn't in a human readable format (it's in epoch time). 
+This is easily solvable in R by reformatting the column.
 	
 	amazonData$time <- as.Date.POSIXct(amazonData$time, origin = "1970-01-01")
 
@@ -12,10 +12,10 @@ solved in R by removing the space:
 
 	amazonData$userId <- gsub(pattern = " ", replacement = "", x = amazonData$userId)
 
-For 3 - the helpfulness comes in many levels. I would find it helpful 
-to normalize this data. To do this in R, I split the string on the "/", 
-convert the list into a data frame, name the columns, calculate the 
-helpfulness score as a percentage, and add it all back to the original 
+For 3 - the helpfulness comes in many levels. I would find it useful to 
+normalize this data. To do this in R, I split the string on the "/", 
+converted the list into a data frame, named the columns, calculated the 
+helpfulness score as a percentage, and added it all back to the original 
 data frame.
 
 	new_level <- strsplit(as.character(amazonData$helpfulness), "/")
@@ -26,18 +26,19 @@ data frame.
 	amazonData$helpfulness1 <- new_level$num_times_helpful / new_level$num_people_voting
 	amazonData <- cbind(amazonData, new_level)
 
-This leads to two other problems - helpfulness scores that are not a number 
-(NaN) due to dividing by 0 and others that are greater than 1. To deal with 
-the NaN, I would make the decision to rate that a 0.
+This leads to two other, new problems - helpfulness scores that are not a 
+number (NaN) due to dividing by 0 and others that are greater than 1. To 
+deal with the NaN, I would make the decision to rate that a 0.
 
 	amazonData$helpfulness1[is.nan(amazonData$helpfulness1)] <- 0
 
 It is not as simple to deal with the others that are greater than 1. As far as 
-I can tell, these scores come from people voting a review as helpful more than 
-once. In this dataset, there are only 6; because it isn't many and the scores 
+I can tell, these scores come from people voting the same review as helpful more 
+than once. In this dataset, there are only 6; because it isn't many and the scores 
 aren't very much higher than 1, I'd just assign these scores of 1. 
 
 	amazonData$helpfulness1[amazonData$helpfulness1 > 1] <- 1
 
 For 4 - there are some people who rate the same product more than one time. 
-I would average out the scores and helpfulness values in these cases.
+To deal with this and keep things fair, I would average out the scores and 
+helpfulness values in these cases.
