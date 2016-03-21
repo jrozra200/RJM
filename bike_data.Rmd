@@ -1,0 +1,183 @@
+---
+title: "RJ Metrics"
+author: "Jacob Rozran"
+date: "March 21, 2016"
+output: html_document
+---
+
+# Introduction
+
+In this exercise, I've been asked to "take a look at the [Bike Theft data on OpenDataPhilly](https://www.opendataphilly.org/dataset/bicycle-thefts). What insights can you draw about patterns of bike theft in Philadelphia? We encourage you to use open source tools, such as Python or R to analyze the data set. Please provide your script and results to support your findings."
+
+# Getting Started
+
+At the link above, I found two datasets. One that spans from January 1, 2010 through September 16, 2013 and another that spans from September 15, 2014 through February 8, 2015. I downloaded them both as CSV files and read them into R. 
+
+```{r load_data_and_packages}
+library(ggplot2)        # WILL BE USED TO DISPLAY SOME DATA VISUALLY
+library(ggmap)          # WILL BE USED TO GET MAPS OF PHILADELPHIA
+library(plyr)           # WILL BE USED TO HELP SUMMARIZE THE DATA
+
+early_data <- read.csv("Bicycle_Thefts.csv")
+later_data <- read.csv("Bicycle_Thefts_9_15_2014_-_2_8_2015.csv")
+```
+
+## First Looks at the Data
+
+To get started, I took a quick look at the head of the datasets and a summary of both. I've omitted that output from this document, but there are some differences in the data. The first dataset includes 12 variables where the second includes 17. In order to combine the two sets into one, I changed the names that have been formatted differently to match one another. I also recreate the latitude and longitude features in the second dataset to match that of the first. 
+
+```{r clean_data}
+## RENAME THINGS TO MAKE THEM EASIER TO DEAL WITH AND/OR MATCH ONE ANOTHER
+names(early_data) <- c("DC_Number", "DC_Key", "Location", "Theft_Date", 
+                       "Theft_Year", "District", "Stolen_Value", "Theft_Hour", 
+                       "UCR", "lat", "lon", "Location_1")
+names(later_data) <- c("FID", "DC_Number", "DC_Key", "Location", "Theft_Date", 
+                       "Theft_Year", "District", "Stolen_Value", "Theft_Hour", 
+                       "UCR", "Location_1", "Y", "GlobalID", "x2", "y2")
+
+## CHANGE THE DATE FIELD INTO A DATE VARIABLE IN THE R CONTEXT
+early_data$Theft_Date <- as.POSIXct(strptime(as.character(early_data$Theft_Date), 
+                                             format = "%m/%d/%Y %I:%M:%S %p"))
+later_data$Theft_Date <- as.POSIXct(strptime(as.character(later_data$Theft_Date), 
+                                             format = "%m/%d/%Y %I:%M:%S %p"))
+
+## MAKE LATITUDE AND LONGITUDE FIELDS IN THE later_data
+later_latlong <- later_data$Location_1
+later_latlong <- gsub(pattern = "\\(", replacement = "", x = later_latlong)
+later_latlong <- gsub(pattern = "\\)", replacement = "", x = later_latlong)
+later_latlong <- strsplit(later_latlong, ", ")
+later_latlong <- ldply(later_latlong, rbind)
+names(later_latlong) <- c("lon", "lat")
+later_latlong$lon <- as.numeric(as.character(later_latlong$lon))
+later_latlong$lat <- as.numeric(as.character(later_latlong$lat))
+
+## ADD THE LATITUDE AND LONGITUDE TO THE later_data DATAFRAME
+later_data <- cbind(later_data, later_latlong)
+```
+
+With those steps completed, I am now able to combine the two dataframes into one. 
+
+```{r combine_data}
+combined_data <- rbind(early_data, later_data[, c(2:10, 17, 16, 11)])
+```
+
+# EXPLORING THE DATA
+
+## Stolen Bike Values
+
+Now that I have a single dataset, let's see what the data looks like. I start with the values of the bikes stolen. Being a cyclist myself, I know these things aren't cheap. What kind of bikes are the miscreants of Philadelphia stealing?
+
+```{r stolen_Value}
+par(mfrow = c(1,2))
+hist(combined_data$Stolen_Value, xlab = "Value of Stolen Bike ($)", 
+     main = "Histogram of Stolen Bike Value")
+boxplot(combined_data$Stolen_Value, ylab = "Value of Stolen Bike ($)", 
+        main = "Boxplot of Stolen Bike Value")
+quantile(combined_data$Stolen_Value, c(0.1, 0.25, 0.5, 0.75, 0.9))
+```
+
+Looking above, you can see that there are definitely some expensive bikes stolen. The most expensive bike was $`r max(combined_data$Stolen_Value)`. I really hope that that bike wasn't just left outside somewhere... The first thing that becomes obvious here is that 75% of bikes are valued at $500 and below; not a small chunk of change, but small potatoes compared to the higher end bikes out there. 
+
+## Uniform Crime Report Codes
+
+Now, there are three Uniform Crime Report (UCR) codes present in the data. After a substantial amount of Googling, a message to an aquaintance of mine at Socrata (the company is responsible for posting the data for OpenDataPhilly), and a few tweets to the CDO of the city, Tim Wisniewski, I was unable to say definitively what the difference is between these codes... I was only able to find information suggesting the 6xx codes are larceny (pretty obvious). So, I tried to get the data to tell me. 
+
+```{r ucr_codes}
+par(mfrow = c(1,1))
+boxplot(combined_data$Stolen_Value ~ combined_data$UCR)
+
+count_by_UCR <- ddply(combined_data, .(UCR), summarize, count = length(UCR))
+print(count_by_UCR)
+```
+
+About two-thirds of the data is labeled as a UCR of 615. Those bikes stolen under that pretense span the range of Stolen Value. 625 encompases a majority of that final one-third, but the bikes are much more modestly valued. 635 is only a small percentage of the overall count and accounts for even more modestly valued bikes yet. 
+
+## Timing of the Theft
+
+Now that we know what the bad-guys stole and, to an extent, how, when did they steal the bikes? 
+
+In looking at the hour of the day, the most bikes are reported stolen at 17:00 (5:00 PM). This makes sense to me; you leave your bike while you are working and come out to find it is gone. 
+
+```{r time_of_day}
+count_by_hour <- ddply(combined_data, .(Theft_Hour), summarize, 
+                       count615 = length(Theft_Hour[UCR == 615]),
+                       count625 = length(Theft_Hour[UCR == 625]),
+                       count635 = length(Theft_Hour[UCR == 635]))
+rownames(count_by_hour) <- count_by_hour$Theft_Hour
+count_by_hour$Theft_Hour <- NULL
+count_by_hour <- t(count_by_hour)
+rownames(count_by_hour) <- c("615", "625", "635")
+barplot(count_by_hour, col = c("blue", "red", "yellow"))
+legend(0, 600, rownames(count_by_hour), fill = c("blue", "red", "yellow"), 
+       bty = "n")
+```
+
+I was not expecting to see that the day of the week when most bikes were reported stolen was Monday. Thinking more about it - if you are gone all weekend or only using your bike to commute to work, it's entirely reasonable that Monday would have the most reports.
+
+```{r day_of_week}
+combined_data$dow <- weekdays(combined_data$Theft_Date)
+
+count_by_weekday <- ddply(combined_data, .(dow), summarize, 
+                          count615 = length(dow[UCR == 615]),
+                          count625 = length(dow[UCR == 625]),
+                          count635 = length(dow[UCR == 635]))
+count_by_weekday$num <- c(6, 2, 7, 1, 5, 3, 4)
+count_by_weekday <- count_by_weekday[order(count_by_weekday$num), ]
+count_by_weekday$num <- NULL
+rownames(count_by_weekday) <- count_by_weekday$dow
+count_by_weekday$dow <- NULL
+count_by_weekday <- t(count_by_weekday)
+rownames(count_by_weekday) <- c("615", "625", "635")
+barplot(count_by_weekday, col = c("blue", "red", "yellow"))
+legend(0, 1275, rownames(count_by_weekday), fill = c("blue", "red", "yellow"), 
+       bty = "n")
+```
+
+Not surprising at all is that most bikes are stolen in the summer. People ride more in the summer; only crazy people like me ride a bike in the winter.
+
+```{r month_of_year}
+combined_data$month <- months(combined_data$Theft_Date)
+
+count_by_month <- ddply(combined_data, .(month), summarize, 
+                        count615 = length(month[UCR == 615]), 
+                        count625 = length(month[UCR == 625]),
+                        count635 = length(month[UCR == 635]))
+count_by_month$num <- c(4, 8, 12, 2, 1, 7, 6, 3, 5, 11, 10, 9)
+count_by_month <- count_by_month[order(count_by_month$num), ]
+count_by_month$num <- NULL
+rownames(count_by_month) <- count_by_month$month
+count_by_month$month <- NULL
+count_by_month <- t(count_by_month)
+rownames(count_by_month) <- c("615", "625", "635")
+barplot(count_by_month, col = c("blue", "red", "yellow"))
+legend(1, 1000, rownames(count_by_month), fill = c("blue", "red", "yellow"), 
+       bty = "n")
+```
+
+## Location of the Theft
+
+The last part of this data I want to investigate is where the thefts are occuring. You can see below that there is a very hot spot at center city with two other warm spots at Temple and University City. 
+
+```{r building_heatmaps}
+phil2 <- get_map(location = "Philadelphia", maptype = "roadmap", zoom = 12)
+map2 <- ggmap(phil2, extent = "device") + 
+        geom_density2d(data = early_data, aes(x = lon, y = lat)) + 
+        stat_density2d(data = early_data, aes(fill = ..level.., alpha = ..level..),
+                       size = 0.01, geom = "polygon") + 
+        scale_fill_gradient(low = "green", high = "red", guide = FALSE) + 
+        scale_alpha(range = c(0, 0.3), guide = FALSE)
+
+phil1 <- get_map(location = "Philadelphia", maptype = "roadmap", zoom = 13)
+map1 <- ggmap(phil1, extent = "device") + 
+        geom_density2d(data = early_data, aes(x = lon, y = lat)) + 
+        stat_density2d(data = early_data, aes(fill = ..level.., alpha = ..level..),
+                       size = 0.01, geom = "polygon") + 
+        scale_fill_gradient(low = "green", high = "red", guide = FALSE) + 
+        scale_alpha(range = c(0, 0.3), guide = FALSE)
+
+map2
+
+map1
+```
+
+# Summary
