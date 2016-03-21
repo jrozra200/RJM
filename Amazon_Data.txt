@@ -1,14 +1,24 @@
-For this exercise, I've had a difficult time figuring out how to answer. There are a number of things I edited in the data frame to clean it up; I mostly consider them business as usual and hope that I am not over simplifying the task.
+For this exercise, I've had a difficult time figuring out how to answer. 
+There are a number of things I edited in the data frame to clean it up; 
+I mostly consider them business as usual and hope that I am not over 
+simplifying the task.
 
-For 1 - the date isn't in a human readable format. This is easily solvable in R by reformatting the column.
+For 1 - the date isn't in a human readable format. This is easily solvable 
+in R by reformatting the column.
 	
 	amazonData$time <- as.Date.POSIXct(amazonData$time, origin = "1970-01-01")
 
-For 2 - I had a hard time at first finding the userId I needed. As it turns out, there is a space in front of every username. This can be solved in R by removing the space:
+For 2 - I had a hard time at first finding the userId I needed. As it 
+turns out, there is a space in front of every username. This can be 
+solved in R by removing the space:
 
 	amazonData$userId <- gsub(pattern = " ", replacement = "", x = amazonData$userId)
 
-For 3 - the helpfulness comes in many levels. I would find it helpful to normalize this data. To do this in R, I split the string on the "/", convert the list into a data frame, name the columns, calculate the helpfulness score as a percentage, and add it all back to the original data frame.
+For 3 - the helpfulness comes in many levels. I would find it helpful 
+to normalize this data. To do this in R, I split the string on the "/", 
+convert the list into a data frame, name the columns, calculate the 
+helpfulness score as a percentage, and add it all back to the original 
+data frame.
 
 	new_level <- strsplit(as.character(amazonData$helpfulness), "/")
 	new_level <- ldply(new_level, rbind)
@@ -18,12 +28,18 @@ For 3 - the helpfulness comes in many levels. I would find it helpful to normali
 	amazonData$helpfulness1 <- new_level$num_times_helpful / new_level$num_people_voting
 	amazonData <- cbind(amazonData, new_level)
 
-This leads to two other problems - helpfulness scores that are not a number (NaN) due to dividing by 0 and others that are greater than 1. To deal with the NaN, I would make the decision to rate that a 0.
+This leads to two other problems - helpfulness scores that are not a number 
+(NaN) due to dividing by 0 and others that are greater than 1. To deal with 
+the NaN, I would make the decision to rate that a 0.
 
 	amazonData$helpfulness1[is.nan(amazonData$helpfulness1)] <- 0
 
-It is not as simple to deal with the others that are greater than 1. As far as I can tell, these scores come from people voting a review as helpful more than once. In this dataset, there are only 6; because it isn't many and the scores aren't very much higher than 1, I'd just assign these scores of 1. 
+It is not as simple to deal with the others that are greater than 1. As far as 
+I can tell, these scores come from people voting a review as helpful more than 
+once. In this dataset, there are only 6; because it isn't many and the scores 
+aren't very much higher than 1, I'd just assign these scores of 1. 
 
 	amazonData$helpfulness1[amazonData$helpfulness1 > 1] <- 1
 
-For 4 - there are some people who rate the same product more than one time. I would average out the scores and helpfulness values in these cases.
+For 4 - there are some people who rate the same product more than one time. 
+I would average out the scores and helpfulness values in these cases.
